@@ -224,16 +224,15 @@ def learn(env,
   update_target()
 
   episode_rewards = [0.0]
+  episode_beacons = [0.0]
   saved_mean_reward = None
-
-  path_memory = np.zeros((64,64))
 
   obs = env.reset()
   obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
 
+  # TODO: Check the difference between obs[0].observation['screen'] and obs[0].observation['screen'][_PLAYER_RELATIVE]
   player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
-
-  screen = player_relative + path_memory
+  screen = player_relative
 
   player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
   player = [int(player_x.mean()), int(player_y.mean())]
@@ -274,16 +273,94 @@ def learn(env,
       path_memory_ = np.array(path_memory, copy=True)
 
       #TODO: Append action into path memory and rewards
+      
+      coord[0] = action // 64 # Size of screen coordinate grid
+      coord[1] = action % 64
 
-      if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
+      change_x = coord[0] - player[0]
+      change_y = coord[1] - player[1]
+
+			if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
         obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
 
-      coord[0] = action // 84 # Size of screen coordinate grid
-      coord[1] = action % 84
-      new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
+     	if change_x == 0 and change_y == 0:
+     		# Didn't move
+     		
+     	else:
+      	new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
+      	obs = env.step(actions = new_action)
+
+      rew = obs[0].reward * 10
+
+      done = obs[0].step_type == environment.StepType.LAST
+
+      new_screen = obs[0].observation['screen']
+      replay_buffer.add(screen, action, rew, new_screen)
+      screen = new_screen
+
+      episode_rewards[-1] += rew
+      episode_beacons[-1] += obs[0].reward
+
+      if done:
+      	obs = env.reset()
+        player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
+
+        screen = player_relative
+
+        player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
+        player = [int(player_x.mean()), int(player_y.mean())]
+
+        env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
+        episode_rewards.append(0.0)
+        episode_minerals.append(0.0)
+
+        reset = True
+
+      if t > learning_starts and t % train_freq == 0:
+        # Minimize the error in Bellman's equation on a batch sampled from replay buffer.
+        if prioritized_replay:
+          experience = replay_buffer.sample(batch_size, beta=beta_schedule.value(t))
+          (obses_t, actions, rewards, obses_tp1, dones, weights, batch_idxes) = experience
+        else:
+          obses_t, actions, rewards, obses_tp1, dones = replay_buffer.sample(batch_size)
+          weights, batch_idxes = np.ones_like(rewards), None
+        td_errors = train(obses_t, actions, rewards, obses_tp1, dones, weights)
+        if prioritized_replay:
+          new_priorities = np.abs(td_errors) + prioritized_replay_eps
+          replay_buffer.update_priorities(batch_idxes, new_priorities)
+
+      if t > learning_starts and t % target_network_update_freq == 0:
+        # Update target network periodically.
+        update_target() 
+      	
+      mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
+      mean_100ep_mineral = round(np.mean(episode_minerals[-101:-1]), 1)
+      num_episodes = len(episode_rewards)
+      if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
+        logger.record_tabular("steps", t)
+        logger.record_tabular("episodes", num_episodes)
+        logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
+        logger.record_tabular("mean 100 episode mineral", mean_100ep_mineral)
+        logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
+        logger.dump_tabular()
+
+      if (checkpoint_freq is not None and t > learning_starts and
+              num_episodes > 100 and t % checkpoint_freq == 0):
+        if saved_mean_reward is None or mean_100ep_reward > saved_mean_reward:
+          if print_freq is not None:
+            logger.log("Saving model due to mean reward increase: {} -> {}".format(
+              saved_mean_reward, mean_100ep_reward))
+          U.save_state(model_file)
+          model_saved = True
+          saved_mean_reward = mean_100ep_reward
+    if model_saved:
+      if print_freq is not None:
+        logger.log("Restored model with mean reward: {}".format(saved_mean_reward))
+      U.load_state(model_file)
+
+  return ActWrapper(act)
 
 
-  
 
 def main():
   FLAGS(sys.argv)
@@ -302,7 +379,7 @@ def main():
     act = learn(
       env,
       q_func=model,
-      num_actions=7056,
+      num_actions=4096,
       lr=1e-5,
       max_timesteps=2000000,
       buffer_size=100000,
