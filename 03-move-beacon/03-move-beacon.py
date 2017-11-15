@@ -1,11 +1,11 @@
 import os
-import tensorflow as tensorflow
+import tensorflow as tf
 import dill
-import numpy as numpy
+import numpy as np
 import zipfile
 import tempfile
 
-import baselines.common.tf_util as tf_util
+import baselines.common.tf_util as U
 
 from baselines import logger
 from baselines.common.schedules import LinearSchedule
@@ -23,10 +23,10 @@ _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _PLAYER_FRIENDLY = 1
 _PLAYER_NEUTRAL = 3  # beacon/minerals
 _PLAYER_HOSTILE = 4
-_NO_OP = actions.FUNCTIONS.no_op.id
-_MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
-_ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
-_SELECT_ARMY = actions.FUNCTIONS.select_army.id
+_NO_OP = sc2_actions.FUNCTIONS.no_op.id
+_MOVE_SCREEN = sc2_actions.FUNCTIONS.Move_screen.id
+_ATTACK_SCREEN = sc2_actions.FUNCTIONS.Attack_screen.id
+_SELECT_ARMY = sc2_actions.FUNCTIONS.select_army.id
 _NOT_QUEUED = [0]
 _SELECT_ALL = [0]
 
@@ -184,14 +184,14 @@ def learn(env,
   """
   # Create all the functions necessary to train the model
 
-	sess = U.make_session(num_cpu)
-	sess.__enter__()
+  sess = U.make_session(num_cpu)
+  sess.__enter__()
 
-	def make_obs_ph(name):
-	  return U.BatchInput((64, 64), name=name)
+  def make_obs_ph(name):
+    return U.BatchInput((64, 64), name=name)
 
-	act, train, update_target, debug = deepq.build_train(
-		make_obs_ph=make_obs_ph,
+  act, train, update_target, debug = deepq.build_train(
+    make_obs_ph=make_obs_ph,
     q_func=q_func,
     num_actions=num_actions,
     optimizer=tf.train.AdamOptimizer(learning_rate=lr),
@@ -227,12 +227,15 @@ def learn(env,
   episode_beacons = [0.0]
   saved_mean_reward = None
 
+  path_memory = np.zeros((64, 64))
+
   obs = env.reset()
   obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
 
-  # TODO: Check the difference between obs[0].observation['screen'] and obs[0].observation['screen'][_PLAYER_RELATIVE]
   player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
-  screen = player_relative
+  screen = player_relative + path_memory
+
+  print(np.array(screen)[None].shape)
 
   player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
   player = [int(player_x.mean()), int(player_y.mean())]
@@ -270,8 +273,6 @@ def learn(env,
       coord = [player[0], player[1]]
       rew = 0
 
-      path_memory_ = np.array(path_memory, copy=True)
-
       #TODO: Append action into path memory and rewards
       
       coord[0] = action // 64 # Size of screen coordinate grid
@@ -280,39 +281,35 @@ def learn(env,
       change_x = coord[0] - player[0]
       change_y = coord[1] - player[1]
 
-			if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
-        obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
-
-     	if change_x == 0 and change_y == 0:
-     		# Didn't move
-     		
-     	else:
-      	new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
-      	obs = env.step(actions = new_action)
+      if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
+        obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])   
+      else:
+        new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
+        obs = env.step(actions = new_action)
 
       rew = obs[0].reward * 10
 
       done = obs[0].step_type == environment.StepType.LAST
 
-      new_screen = obs[0].observation['screen']
-      replay_buffer.add(screen, action, rew, new_screen)
+      new_screen = obs[0].observation['screen'] + path_memory
+      replay_buffer.add(screen, action, rew, new_screen, float(done))
       screen = new_screen
 
       episode_rewards[-1] += rew
       episode_beacons[-1] += obs[0].reward
 
       if done:
-      	obs = env.reset()
+        obs = env.reset()
         player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
 
-        screen = player_relative
+        screen = player_relative + path_memory
 
         player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
         player = [int(player_x.mean()), int(player_y.mean())]
 
         env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
         episode_rewards.append(0.0)
-        episode_minerals.append(0.0)
+        episode_beacons_append(0.0)
 
         reset = True
 
@@ -332,9 +329,9 @@ def learn(env,
       if t > learning_starts and t % target_network_update_freq == 0:
         # Update target network periodically.
         update_target() 
-      	
+        
       mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
-      mean_100ep_mineral = round(np.mean(episode_minerals[-101:-1]), 1)
+      mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
       num_episodes = len(episode_rewards)
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
@@ -359,40 +356,3 @@ def learn(env,
       U.load_state(model_file)
 
   return ActWrapper(act)
-
-
-
-def main():
-  FLAGS(sys.argv)
-  with sc2_env.SC2Env(
-      "MoveToBeacon",
-      step_mul=step_mul,
-      visualize=True,
-      game_steps_per_episode=steps * step_mul) as env:
-
-    model = deepq.models.cnn_to_mlp(
-      convs=[(32, 8, 4), (64, 4, 2), (64, 3, 1)],
-      hiddens=[256],
-      dueling=True
-    )
-
-    act = learn(
-      env,
-      q_func=model,
-      num_actions=4096,
-      lr=1e-5,
-      max_timesteps=2000000,
-      buffer_size=100000,
-      exploration_fraction=0.5,
-      exploration_final_eps=0.01,
-      train_freq=4,
-      learning_starts=100000,
-      target_network_update_freq=1000,
-      gamma=0.99,
-      prioritized_replay=True
-    )
-    act.save("mineral_shards.pkl")
-
-
-if __name__ == '__main__':
-  main()
