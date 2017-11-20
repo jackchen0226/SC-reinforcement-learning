@@ -299,8 +299,9 @@ def learn(env,
       # path_memory = np.array(path_memory_) # at end of action, edit path_memory
       if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
         obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])   
-      new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
-      obs = env.step(actions = new_action)
+      else:
+	      new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
+	      obs = env.step(actions = new_action)
 
       rew = obs[0].reward * 10
 
