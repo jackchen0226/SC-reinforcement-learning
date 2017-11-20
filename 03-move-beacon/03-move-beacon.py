@@ -235,10 +235,21 @@ def learn(env,
   player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
   screen = player_relative + path_memory
 
-  print(np.array(screen)[None].shape)
+  #print(np.array(screen)[None].shape)
 
   player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
   player = [int(player_x.mean()), int(player_y.mean())]
+
+  if(player[0]>32):
+    screen = shift(LEFT, player[0]-32, screen)
+  elif(player[0]<32):
+    screen = shift(RIGHT, 32 - player[0], screen)
+
+  if(player[1]>32):
+    screen = shift(UP, player[1]-32, screen)
+  elif(player[1]<32):
+    screen = shift(DOWN, 32 - player[1], screen)
+  #print(np.array(screen)[None].shape)
 
   reset = True
   with tempfile.TemporaryDirectory() as td:
@@ -267,6 +278,7 @@ def learn(env,
         kwargs['reset'] = reset
         kwargs['update_param_noise_threshold'] = update_param_noise_threshold
         kwargs['update_param_noise_scale'] = True
+      #print(np.array(screen)[None].shape)
       action = act(np.array(screen)[None], update_eps=update_eps, **kwargs)[0]
       reset = False
 
@@ -281,17 +293,20 @@ def learn(env,
       change_x = coord[0] - player[0]
       change_y = coord[1] - player[1]
 
+      path_memory_ = np.array(path_memory, copy=True)
+
+      # action 0-3
+      # path_memory = np.array(path_memory_) # at end of action, edit path_memory
       if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
         obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])   
-      else:
-        new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
-        obs = env.step(actions = new_action)
+      new_action = [sc2_actions.FunctionCall(_MOVE_SCREEN, [_NOT_QUEUED, coord])]
+      obs = env.step(actions = new_action)
 
       rew = obs[0].reward * 10
 
       done = obs[0].step_type == environment.StepType.LAST
 
-      new_screen = obs[0].observation['screen'] + path_memory
+      new_screen = obs[0].observation['screen'][_PLAYER_RELATIVE] + path_memory
       replay_buffer.add(screen, action, rew, new_screen, float(done))
       screen = new_screen
 
@@ -307,9 +322,21 @@ def learn(env,
         player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
         player = [int(player_x.mean()), int(player_y.mean())]
 
+        if(player[0]>32):
+          screen = shift(LEFT, player[0]-32, screen)
+        elif(player[0]<32):
+          screen = shift(RIGHT, 32 - player[0], screen)
+
+        if(player[1]>32):
+          screen = shift(UP, player[1]-32, screen)
+        elif(player[1]<32):
+          screen = shift(DOWN, 32 - player[1], screen)
+
         env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
         episode_rewards.append(0.0)
-        episode_beacons_append(0.0)
+        episode_beacons.append(0.0)
+
+        path_memory = np.zeros((64, 64))
 
         reset = True
 
@@ -337,7 +364,7 @@ def learn(env,
         logger.record_tabular("steps", t)
         logger.record_tabular("episodes", num_episodes)
         logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
-        logger.record_tabular("mean 100 episode mineral", mean_100ep_mineral)
+        logger.record_tabular("mean 100 episode beacon", mean_100ep_beacon)
         logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
         logger.dump_tabular()
 
@@ -356,3 +383,28 @@ def learn(env,
       U.load_state(model_file)
 
   return ActWrapper(act)
+
+UP, DOWN, LEFT, RIGHT = 'up', 'down', 'left', 'right'
+
+def shift(direction, number, matrix):
+  ''' shift given 2D matrix in-place the given number of rows or columns
+      in the specified (UP, DOWN, LEFT, RIGHT) direction and return it
+  '''
+  if direction == UP:
+    matrix = np.roll(matrix, -number, axis=0)
+    matrix[number:,:] = -2
+    return matrix
+  elif direction == DOWN:
+    matrix = np.roll(matrix, number, axis=0)
+    matrix[:number,:] = -2
+    return matrix
+  elif direction == LEFT:
+    matrix = np.roll(matrix, -number, axis=1)
+    matrix[:,number:] = -2
+    return matrix
+  elif direction == RIGHT:
+    matrix = np.roll(matrix, number, axis=1)
+    matrix[:,:number] = -2
+    return matrix
+  else:
+    return matrix
