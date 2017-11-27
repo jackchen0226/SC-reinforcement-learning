@@ -36,9 +36,9 @@ flags.DEFINE_string("map", "MoveToBeacon",
                     "Name of a map to use to play.")
 start_time = datetime.datetime.now().strftime("%Y%m%d%H%M")
 flags.DEFINE_string("log", "tensorboard", "logging type(stdout, tensorboard)")
-flags.DEFINE_string("algorithm", "a2c", "RL algorithm to use.")
+flags.DEFINE_string("algorithm", "deepq", "RL algorithm to use.")
 flags.DEFINE_integer("timesteps", 2000000, "Steps to train")
-flags.DEFINE_float("exploration_fraction", 0.5, "Exploration Fraction")
+flags.DEFINE_float("exploration_fraction", 0.2, "Exploration Fraction")
 flags.DEFINE_boolean("prioritized", True, "prioritized_replay")
 flags.DEFINE_boolean("dueling", True, "dueling")
 flags.DEFINE_float("lr", 0.0005, "Learning rate")
@@ -166,7 +166,7 @@ def main():
 
     seed = 0
 
-    env = SubprocVecEnv(FLAGS.num_agents + FLAGS.num_scripts, FLAGS.map)
+    env = SubprocVecEnv((FLAGS.num_agents + FLAGS.num_scripts), FLAGS.map)
 
     policy_fn = CnnPolicy
     a2c.learn(
