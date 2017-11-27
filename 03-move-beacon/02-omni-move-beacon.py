@@ -321,15 +321,16 @@ def learn(env,
       	player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
       	player = [int(player_x.mean()), int(player_y.mean())]
       except ValueError:
-      	print(player_y, player_x)
+      	#print(player_y, player_x)
+      	pass
       
       screen_l = 16
 
-      rew = obs[0].reward * 10
+      rew = obs[0].reward * 100
       # change_m is difference of clicked points 
       # compare to radius of circle half the area of screen
-      if change_m > np.sqrt((screen_l**2/2)/np.pi):
-      	rew -= 1
+      #if change_m > np.sqrt((screen_l**2/2)/np.pi):
+      #	rew -= 1
       # compare to raidus of circle quarter of area of screen
       if change_m < np.sqrt((screen_l**2/4)/np.pi):
       	rew += 1

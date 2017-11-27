@@ -78,8 +78,8 @@ def main():
       FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
       FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
   elif (FLAGS.algorithm == "deepq"):
-    logdir = "tensorboard/mineral/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
-      FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
+    logdir = "tensorboard/%s/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
+      FLAGS.map, FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
       FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
   elif (FLAGS.algorithm == "a2c"):
     logdir = "tensorboard/mineral/%s/%s_n%s_s%s_nsteps%s/lr%s/%s" % (
@@ -187,7 +187,7 @@ import numpy as np
 
 
 def deepq_callback(locals, globals):
-  #pprint.pprint(locals)
+  pprint.pprint(locals)
   global max_mean_reward, last_filename
   if ('done' in locals and locals['done'] == True):
     if ('mean_100ep_reward' in locals and locals['num_episodes'] >= 10
