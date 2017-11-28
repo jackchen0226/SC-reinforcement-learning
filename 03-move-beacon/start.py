@@ -187,7 +187,7 @@ import numpy as np
 
 
 def deepq_callback(locals, globals):
-  pprint.pprint(locals)
+  #pprint.pprint(locals)
   global max_mean_reward, last_filename
   if ('done' in locals and locals['done'] == True):
     if ('mean_100ep_reward' in locals and locals['num_episodes'] >= 10
