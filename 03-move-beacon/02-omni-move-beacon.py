@@ -4,6 +4,7 @@ import dill
 import numpy as np
 import zipfile
 import tempfile
+import time
 
 import baselines.common.tf_util as U
 
@@ -298,6 +299,8 @@ def learn(env,
 
       coord = [player[0], player[1]]
       rew = 0
+      beacon_time_start = time.time()
+      beacon_time = 0
       
       coord = [action_x, action_y]
 
@@ -325,16 +328,24 @@ def learn(env,
       	pass
       
       screen_l = 16
-
+      
+      if rew < (obs[0].reward * 100):
+      	#obs[0].reward has increased
+      	beacon_time_end = time.time()
+      	beacon_time = beacon_time_end - beacon_time_start
+      	beacon_time_start = time.time()
       rew = obs[0].reward * 100
+
       # change_m is difference of clicked points 
       # compare to radius of circle half the area of screen
       #if change_m > np.sqrt((screen_l**2/2)/np.pi):
       #	rew -= 1
       # compare to raidus of circle quarter of area of screen
+      move_rew = 0
       if change_m < np.sqrt((screen_l**2/4)/np.pi):
-      	rew += 1
+      	move_rew += 1
 
+      rew += move_rew
       done = obs[0].step_type == environment.StepType.LAST
 
 
@@ -345,6 +356,7 @@ def learn(env,
 
       episode_rewards[-1] += rew
       episode_beacons[-1] += obs[0].reward
+      episode_beacons_time[-1] += beacon_time
       reward = episode_rewards[-1]
 
       if done:
@@ -396,6 +408,7 @@ def learn(env,
         
       mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
       mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
+      mean_100ep_beacon_time = round(np.mean(episode_beacons_time[-101:-1]), 1)
       num_episodes = len(episode_rewards)
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
@@ -403,11 +416,12 @@ def learn(env,
         logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
         logger.record_tabular("mean 100 episode beacon", mean_100ep_beacon)
         logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
+        logger.record_tabular("mean time between beacon", mean_100ep_beacon_time)
         logger.dump_tabular()
 
       if (checkpoint_freq is not None and t > learning_starts and
               num_episodes > 100 and t % checkpoint_freq == 0):
-        if saved_mean_reward is None or mean_100ep_reward > saved_mean_reward:
+        if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 1.1):
           if print_freq is not None:
             logger.log("Saving model due to mean reward increase: {} -> {}".format(
               saved_mean_reward, mean_100ep_reward))
