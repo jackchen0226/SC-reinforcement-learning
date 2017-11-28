@@ -114,7 +114,7 @@ def main():
       act = deepq_model.learn(
         env,
         q_func=model,
-        num_actions=16,
+        num_actions=2,
         lr=FLAGS.lr,
         max_timesteps=FLAGS.timesteps,
         buffer_size=10000,
