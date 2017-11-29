@@ -94,7 +94,7 @@ def load(path, act_params, num_cpu=16):
 
 def learn(env,
           q_func,
-          num_actions=4,
+          num_actions=16,
           lr=5e-4,
           max_timesteps=100000,
           buffer_size=50000,
@@ -189,7 +189,7 @@ def learn(env,
   sess.__enter__()
 
   def make_obs_ph(name):
-    return U.BatchInput((2, 2), name=name)
+    return U.BatchInput((16, 16), name=name)
 
   act_x, train_x, update_target_x, debug_x = deepq.build_train(
     make_obs_ph=make_obs_ph,
@@ -248,6 +248,7 @@ def learn(env,
 
   episode_rewards = [0.0]
   episode_beacons = [0.0]
+  episode_beacons_time = [0.0]
   saved_mean_reward = None
 
   obs = env.reset()
@@ -357,7 +358,6 @@ def learn(env,
       episode_rewards[-1] += rew
       episode_beacons[-1] += obs[0].reward
       episode_beacons_time[-1] += beacon_time
-      reward = episode_rewards[-1]
 
       if done:
         obs = env.reset()
@@ -370,6 +370,7 @@ def learn(env,
         env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
         episode_rewards.append(0.0)
         episode_beacons.append(0.0)
+        episode_beacons_time.append(0.0)
 
         reset = True
 
@@ -408,7 +409,7 @@ def learn(env,
         
       mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
       mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
-      mean_100ep_beacon_time = round(np.mean(episode_beacons_time[-101:-1]), 1)
+      mean_100ep_beacon_time = np.mean(episode_beacons_time[-101:-1])
       num_episodes = len(episode_rewards)
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
@@ -421,7 +422,7 @@ def learn(env,
 
       if (checkpoint_freq is not None and t > learning_starts and
               num_episodes > 100 and t % checkpoint_freq == 0):
-        if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 1.1):
+        if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 1.2):
           if print_freq is not None:
             logger.log("Saving model due to mean reward increase: {} -> {}".format(
               saved_mean_reward, mean_100ep_reward))

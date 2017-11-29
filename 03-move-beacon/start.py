@@ -106,7 +106,9 @@ def main():
         step_mul=step_mul,
         visualize=True,
         screen_size_px=(16, 16),
-        minimap_size_px=(16, 16)) as env:
+        minimap_size_px=(16, 16),
+        save_replay_episodes=250000,
+        replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
         convs=[(16, 8, 4), (32, 4, 2)], hiddens=[256], dueling=True)
@@ -114,7 +116,7 @@ def main():
       act = deepq_model.learn(
         env,
         q_func=model,
-        num_actions=2,
+        num_actions=16,
         lr=FLAGS.lr,
         max_timesteps=FLAGS.timesteps,
         buffer_size=10000,
@@ -195,13 +197,17 @@ def deepq_callback(locals, globals):
       print("mean_100ep_reward : %s max_mean_reward : %s" %
             (locals['mean_100ep_reward'], max_mean_reward))
 
-      if (not os.path.exists(os.path.join(PROJ_DIR, 'models/deepq/'))):
+      if (not os.path.exists(os.path.join(PROJ_DIR, 'models/deepq/%s' % datetime.date.today()))):
         try:
           os.mkdir(os.path.join(PROJ_DIR, 'models/'))
         except Exception as e:
           print(str(e))
         try:
           os.mkdir(os.path.join(PROJ_DIR, 'models/deepq/'))
+        except Exception as e:
+          print(str(e))
+        try:
+          os.mkdir(os.path.join(PROJ_DIR, 'models/deepq/%s' % datetime.date.today()))
         except Exception as e:
           print(str(e))
 
@@ -215,11 +221,11 @@ def deepq_callback(locals, globals):
 
       filename = os.path.join(
         PROJ_DIR,
-        'models/deepq/mineral_x_%s.pkl' % locals['mean_100ep_reward'])
+        'models/deepq/{}/mineral_x_{}.pkl'.format(datetime.date.today(), locals['mean_100ep_reward']))
       act_x.save(filename)
       filename = os.path.join(
         PROJ_DIR,
-        'models/deepq/mineral_y_%s.pkl' % locals['mean_100ep_reward'])
+        'models/deepq/{}/mineral_y_{}.pkl'.format(datetime.date.today(), locals['mean_100ep_reward']))
       act_y.save(filename)
       print("save best mean_100ep_reward model to %s" % filename)
       last_filename = filename
