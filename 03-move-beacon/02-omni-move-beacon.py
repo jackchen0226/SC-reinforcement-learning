@@ -94,7 +94,7 @@ def load(path, act_params, num_cpu=16):
 
 def learn(env,
           q_func,
-          num_actions=4,
+          num_actions=16,
           lr=5e-4,
           max_timesteps=100000,
           buffer_size=50000,
@@ -189,7 +189,7 @@ def learn(env,
   sess.__enter__()
 
   def make_obs_ph(name):
-    return U.BatchInput((2, 2), name=name)
+    return U.BatchInput((16, 16), name=name)
 
   act_x, train_x, update_target_x, debug_x = deepq.build_train(
     make_obs_ph=make_obs_ph,
@@ -248,6 +248,7 @@ def learn(env,
 
   episode_rewards = [0.0]
   episode_beacons = [0.0]
+  episode_beacons_time = [0.0]
   saved_mean_reward = None
 
   obs = env.reset()
