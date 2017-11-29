@@ -1,15 +1,15 @@
 import sys
 import os
+from importlib import import_module
 
-from absl import flags
+#from absl import flags
 from baselines import deepq
 from pysc2.env import sc2_env
 from pysc2.lib import actions
 import os
 
-
-from importlib import import_module
 deepq_model = import_module("02-omni-move-beacon")
+
 import datetime
 
 from baselines.common.vec_env.subproc_vec_env import SubprocVecEnv
