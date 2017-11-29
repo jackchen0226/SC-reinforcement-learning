@@ -94,7 +94,7 @@ def load(path, act_params, num_cpu=16):
 
 def learn(env,
           q_func,
-          num_actions=4,
+          num_actions=16,
           lr=5e-4,
           max_timesteps=100000,
           buffer_size=50000,
@@ -248,6 +248,7 @@ def learn(env,
 
   episode_rewards = [0.0]
   episode_beacons = [0.0]
+  episode_beacons_time = [0.0]
   saved_mean_reward = None
 
   obs = env.reset()
