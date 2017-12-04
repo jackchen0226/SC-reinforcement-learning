@@ -446,7 +446,7 @@ def learn(env,
 
       if (checkpoint_freq is not None and t > learning_starts and
               num_episodes > 100 and t % checkpoint_freq == 0):
-        if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 1.2):
+        if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 2):
           if print_freq is not None:
             logger.log("Saving model due to mean reward increase: {} -> {}".format(
               saved_mean_reward, mean_100ep_reward))
@@ -459,3 +459,4 @@ def learn(env,
       U.load_state(model_file)
 
   return ActWrapper(act)
+
