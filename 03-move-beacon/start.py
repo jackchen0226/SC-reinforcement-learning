@@ -217,7 +217,7 @@ def deepq_callback(locals, globals):
   global max_mean_reward, last_filename
   if ('done' in locals and locals['done'] == True):
     if ('mean_100ep_reward' in locals and locals['num_episodes'] >= 10
-        and locals['mean_100ep_reward'] > max_mean_reward):
+        and locals['mean_100ep_reward'] > (max_mean_reward * 1.5)):
       print("mean_100ep_reward : %s max_mean_reward : %s" %
             (locals['mean_100ep_reward'], max_mean_reward))
 
