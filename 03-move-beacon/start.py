@@ -131,7 +131,7 @@ def main():
         visualize=True,
         screen_size_px=(16, 16),
         minimap_size_px=(16, 16),
-        save_replay_episodes=250000,
+        save_replay_episodes=10000,
         replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
