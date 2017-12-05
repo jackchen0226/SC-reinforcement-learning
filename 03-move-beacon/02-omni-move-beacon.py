@@ -444,6 +444,7 @@ def learn(env,
         logger.record_tabular("mean time between beacon", mean_100ep_beacon_time)
         logger.dump_tabular()
 
+      '''
       if (checkpoint_freq is not None and t > learning_starts and
               num_episodes > 100 and t % checkpoint_freq == 0):
         if saved_mean_reward is None or mean_100ep_reward > (saved_mean_reward * 1.5):
@@ -453,10 +454,10 @@ def learn(env,
           U.save_state(model_file)
           model_saved = True
           saved_mean_reward = mean_100ep_reward
+      '''
     if model_saved:
       if print_freq is not None:
         logger.log("Restored model with mean reward: {}".format(saved_mean_reward))
       U.load_state(model_file)
 
   return ActWrapper(act)
-

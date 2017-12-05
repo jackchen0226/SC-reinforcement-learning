@@ -223,14 +223,6 @@ def deepq_callback(locals, globals):
 
       if (not os.path.exists(os.path.join(PROJ_DIR, 'models/deepq/%s' % datetime.date.today()))):
         try:
-          os.mkdir(os.path.join(PROJ_DIR, 'models/'))
-        except Exception as e:
-          print(str(e))
-        try:
-          os.mkdir(os.path.join(PROJ_DIR, 'models/deepq/'))
-        except Exception as e:
-          print(str(e))
-        try:
           os.mkdir(os.path.join(PROJ_DIR, 'models/deepq/%s' % datetime.date.today()))
         except Exception as e:
           print(str(e))
