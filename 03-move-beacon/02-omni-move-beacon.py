@@ -139,7 +139,10 @@ def learn(env,
           num_cpu=16,
           param_noise=False,
           param_noise_threshold=0.05,
-          callback=None):
+          callback=None,
+          save_replays=False, 
+          save_episode_period=500,
+          replay_dir='replays/'):
   """Train a deepq model.
 
   Parameters
@@ -200,6 +203,12 @@ def learn(env,
   callback: (locals, globals) -> None
       function called at every steps with state of the algorithm.
       If callback returns true training stops.
+  save_replays: bool
+      Will save episodes if True. Requires save_episode_period and replay_dir.
+  save_episode_period: int
+      The period of which a StarCraft replay is created.
+  replay_dir: str
+      The directory which StarCraft replays are saved in.
 
   Returns
   -------
@@ -273,6 +282,7 @@ def learn(env,
   episode_rewards = [0.0]
   episode_beacons = [0.0]
   episode_beacons_time = [0.0]
+  mean_time_beacons = [0.0]
   saved_mean_reward = None
 
   obs = env.reset()
@@ -293,6 +303,7 @@ def learn(env,
     model_file = os.path.join("model/", "mineral_shards")
     print(model_file)
 
+    beacon_time_start = 0
     for t in range(max_timesteps):
       if callback is not None:
         if callback(locals(), globals()):
@@ -324,7 +335,6 @@ def learn(env,
 
       coord = [player[0], player[1]]
       rew = 0
-      beacon_time_start = time.time()
       beacon_time = 0
       
       coord = [action_x, action_y]
@@ -352,25 +362,22 @@ def learn(env,
       	#print(player_y, player_x)
       	pass
       
-      screen_l = 16
-      
       if rew < (obs[0].reward * 100):
       	#obs[0].reward has increased
-      	beacon_time_end = time.time()
+      	beacon_time_end = t
       	beacon_time = beacon_time_end - beacon_time_start
-      	beacon_time_start = time.time()
+      	beacon_time_start = t
       rew = obs[0].reward * 100
 
       # change_m is difference of clicked points 
       # compare to radius of circle half the area of screen
+      #screen_l = 16
       #if change_m > np.sqrt((screen_l**2/2)/np.pi):
       #	rew -= 1
       # compare to raidus of circle quarter of area of screen
-      move_rew = 0
-      if change_m < np.sqrt((screen_l**2/4)/np.pi):
-      	move_rew += 1
+      #if change_m < np.sqrt((screen_l**2/4)/np.pi):
+      #	rew += 1
 
-      rew += move_rew
       done = obs[0].step_type == environment.StepType.LAST
 
 
@@ -384,6 +391,11 @@ def learn(env,
       episode_beacons_time[-1] += beacon_time
 
       if done:
+        '''
+        if save_replays and len(episode_rewards) % save_episode_period == 0:
+          env.save_replay(replay_dir)
+          print("Replay Saved")
+        '''
         obs = env.reset()
         player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
         screen = (player_relative == _PLAYER_NEUTRAL).astype(int)
@@ -391,10 +403,17 @@ def learn(env,
         player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
         player = [int(player_x.mean()), int(player_y.mean())]
 
+        if episode_beacons_time[-1] != 0.0:
+          mean_time_beacons[-1] = episode_beacons[-1] / episode_beacons_time[-1]
+        else: 
+          mean_time_beacons[-1] = 0.0
+
         env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
         episode_rewards.append(0.0)
         episode_beacons.append(0.0)
         episode_beacons_time.append(0.0)
+        mean_time_beacons.append(0.0)
+        beacon_time_start = t
 
         reset = True
 
@@ -433,7 +452,7 @@ def learn(env,
         
       mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
       mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
-      mean_100ep_beacon_time = np.mean(episode_beacons_time[-101:-1])
+      mean_beacon_time_per_episode = np.mean(mean_time_beacons[-101:-1])
       num_episodes = len(episode_rewards)
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
@@ -441,7 +460,7 @@ def learn(env,
         logger.record_tabular("mean 100 episode reward", mean_100ep_reward)
         logger.record_tabular("mean 100 episode beacon", mean_100ep_beacon)
         logger.record_tabular("% time spent exploring", int(100 * exploration.value(t)))
-        logger.record_tabular("mean time between beacon", mean_100ep_beacon_time)
+        logger.record_tabular("mean time between beacon", mean_beacon_time_per_episode)
         logger.dump_tabular()
 
       '''

@@ -56,7 +56,7 @@ _NOT_QUEUED = [0]
 step_mul = 8
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("map", "MoveToBeacon",
+flags.DEFINE_string("map", "CollectMineralShards",
                     "Name of a map to use to play.")
 start_time = datetime.datetime.now().strftime("%Y%m%d%H%M")
 flags.DEFINE_string("log", "tensorboard", "logging type(stdout, tensorboard)")
@@ -126,12 +126,12 @@ def main():
   if (FLAGS.algorithm == "deepq"):
 
     with sc2_env.SC2Env(
-        map_name="MoveToBeacon",
+        map_name="CollectMineralShards",
         step_mul=step_mul,
         visualize=True,
         screen_size_px=(16, 16),
         minimap_size_px=(16, 16),
-        save_replay_episodes=10000,
+        save_replay_episodes=500,
         replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
@@ -217,7 +217,7 @@ def deepq_callback(locals, globals):
   global max_mean_reward, last_filename
   if ('done' in locals and locals['done'] == True):
     if ('mean_100ep_reward' in locals and locals['num_episodes'] >= 10
-        and locals['mean_100ep_reward'] > (max_mean_reward * 1.5)):
+        and locals['mean_100ep_reward'] > (max_mean_reward * 1.2)):
       print("mean_100ep_reward : %s max_mean_reward : %s" %
             (locals['mean_100ep_reward'], max_mean_reward))
 
