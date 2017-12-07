@@ -77,6 +77,7 @@ last_filename = ""
 
 start_time = datetime.datetime.now().strftime("%m%d%H%M")
 
+SCREEN_DIM = 8
 
 def main():
 
@@ -129,8 +130,8 @@ def main():
         map_name="MoveToBeacon",
         step_mul=step_mul,
         visualize=True,
-        screen_size_px=(16, 16),
-        minimap_size_px=(16, 16),
+        screen_size_px=(SCREEN_DIM, SCREEN_DIM),
+        minimap_size_px=(SCREEN_DIM, SCREEN_DIM),
         save_replay_episodes=250000,
         replay_dir='replays/') as env:
 
@@ -140,7 +141,7 @@ def main():
       act = deepq_model.learn(
         env,
         q_func=model,
-        num_actions=16,
+        num_actions=SCREEN_DIM,
         lr=FLAGS.lr,
         max_timesteps=FLAGS.timesteps,
         buffer_size=10000,
