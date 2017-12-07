@@ -56,7 +56,7 @@ _NOT_QUEUED = [0]
 step_mul = 8
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string("map", "CollectMineralShards",
+flags.DEFINE_string("map", "MoveToBeacon",
                     "Name of a map to use to play.")
 start_time = datetime.datetime.now().strftime("%Y%m%d%H%M")
 flags.DEFINE_string("log", "tensorboard", "logging type(stdout, tensorboard)")
@@ -126,7 +126,7 @@ def main():
   if (FLAGS.algorithm == "deepq"):
 
     with sc2_env.SC2Env(
-        map_name="CollectMineralShards",
+        map_name="MoveToBeacon",
         step_mul=step_mul,
         visualize=True,
         screen_size_px=(16, 16),
