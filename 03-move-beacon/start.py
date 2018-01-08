@@ -69,6 +69,7 @@ flags.DEFINE_float("lr", 0.0005, "Learning rate")
 flags.DEFINE_integer("num_agents", 4, "number of RL agents for A2C")
 flags.DEFINE_integer("num_scripts", 4, "number of script agents for A2C")
 flags.DEFINE_integer("nsteps", 20, "number of batch steps for A2C")
+flags.DEFINE_string("experiment", "SCREEN_DIM=16", "name of experiment")
 
 PROJ_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -99,18 +100,18 @@ def main():
   logdir = "tensorboard"
 
   if (FLAGS.algorithm == "deepq-4way"):
-    logdir = "tensorboard/mineral/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
+    logdir = "tensorboard/mineral/%s/%s_%s_prio%s_duel%s_lr%s/%s-%s" % (
       FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
-      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
+      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time, FLAGS.experiment)
   elif (FLAGS.algorithm == "deepq"):
-    logdir = "tensorboard/%s/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
+    logdir = "tensorboard/%s/%s/%s_%s_prio%s_duel%s_lr%s/%s-%s" % (
       FLAGS.map, FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
-      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
+      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time, FLAGS.experiment)
   elif (FLAGS.algorithm == "a2c"):
-    logdir = "tensorboard/mineral/%s/%s_n%s_s%s_nsteps%s/lr%s/%s" % (
+    logdir = "tensorboard/mineral/%s/%s_n%s_s%s_nsteps%s/lr%s/%s-%s" % (
       FLAGS.algorithm, FLAGS.timesteps,
       FLAGS.num_agents + FLAGS.num_scripts, FLAGS.num_scripts,
-      FLAGS.nsteps, lr_round, start_time)
+      FLAGS.nsteps, lr_round, start_time, FLAGS.experiment)
 
   if (FLAGS.log == "tensorboard"):
     Logger.DEFAULT \

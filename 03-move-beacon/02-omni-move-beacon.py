@@ -293,6 +293,7 @@ def learn(env,
     model_file = os.path.join("model/", "mineral_shards")
     print(model_file)
 
+    beacon_time_start = 0
     for t in range(max_timesteps):
       if callback is not None:
         if callback(locals(), globals()):
@@ -324,7 +325,7 @@ def learn(env,
 
       coord = [player[0], player[1]]
       rew = 0
-      beacon_time_start = time.time()
+      
       beacon_time = 0
       
       coord = [action_x, action_y]
@@ -354,11 +355,11 @@ def learn(env,
       
       screen_l = 16
       
-      if rew < (obs[0].reward * 100):
+      if obs[0].reward != 0:
       	#obs[0].reward has increased
-      	beacon_time_end = time.time()
+      	beacon_time_end = t
       	beacon_time = beacon_time_end - beacon_time_start
-      	beacon_time_start = time.time()
+      	beacon_time_start = t
       rew = obs[0].reward * 100
 
       # change_m is difference of clicked points 
