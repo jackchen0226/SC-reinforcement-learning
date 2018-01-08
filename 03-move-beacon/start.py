@@ -149,8 +149,8 @@ def main():
         exploration_fraction=FLAGS.exploration_fraction,
         exploration_final_eps=0.01,
         train_freq=4,
-        learning_starts=10000,
-        target_network_update_freq=1000,
+        learning_starts=2000,
+        target_network_update_freq=500,
         gamma=0.99,
         prioritized_replay=True,
         callback=deepq_callback)
