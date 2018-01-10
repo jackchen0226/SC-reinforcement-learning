@@ -133,7 +133,7 @@ def main():
         visualize=True,
         screen_size_px=(SCREEN_DIM, SCREEN_DIM),
         minimap_size_px=(SCREEN_DIM, SCREEN_DIM),
-        save_replay_episodes=250000,
+        save_replay_episodes=1000,
         replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
@@ -145,12 +145,12 @@ def main():
         num_actions=SCREEN_DIM,
         lr=FLAGS.lr,
         max_timesteps=FLAGS.timesteps,
-        buffer_size=10000,
+        buffer_size=5000,
         exploration_fraction=FLAGS.exploration_fraction,
         exploration_final_eps=0.01,
         train_freq=4,
-        learning_starts=2000,
-        target_network_update_freq=500,
+        learning_starts=500,
+        target_network_update_freq=100,
         gamma=0.99,
         prioritized_replay=True,
         callback=deepq_callback)

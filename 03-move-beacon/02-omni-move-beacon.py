@@ -29,6 +29,7 @@ import numpy as np
 import zipfile
 import tempfile
 import time
+from collections import deque
 
 import baselines.common.tf_util as U
 
@@ -270,9 +271,14 @@ def learn(env,
   update_target_x()
   update_target_y()
 
-  episode_rewards = [0.0]
-  episode_beacons = [0.0]
-  episode_beacons_time = [0.0]
+  episode_rewards = deque(maxlen=2000)
+  episode_beacons = deque(maxlen=2000)
+  episode_beacons_time = deque(maxlen=2000)
+
+  episode_rewards.append(0.0)
+  episode_beacons.append(0.0)
+  episode_beacons_time.append(0.0)
+
   saved_mean_reward = None
 
   obs = env.reset()
