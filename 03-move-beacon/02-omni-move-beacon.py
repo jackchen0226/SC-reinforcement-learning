@@ -29,6 +29,7 @@ import numpy as np
 import zipfile
 import tempfile
 import time
+from itertools import islice
 from collections import deque
 
 import baselines.common.tf_util as U
@@ -271,14 +272,15 @@ def learn(env,
   update_target_x()
   update_target_y()
 
-  episode_rewards = deque(maxlen=2000)
-  episode_beacons = deque(maxlen=2000)
-  episode_beacons_time = deque(maxlen=2000)
+  episode_rewards = deque(maxlen=100)
+  episode_beacons = deque(maxlen=100)
+  episode_beacons_time = deque(maxlen=100)
 
   episode_rewards.append(0.0)
   episode_beacons.append(0.0)
   episode_beacons_time.append(0.0)
 
+  num_episodes = 0
   saved_mean_reward = None
 
   obs = env.reset()
@@ -402,6 +404,7 @@ def learn(env,
         episode_rewards.append(0.0)
         episode_beacons.append(0.0)
         episode_beacons_time.append(0.0)
+        num_episodes += 1
 
         reset = True
 
@@ -438,10 +441,9 @@ def learn(env,
         update_target_x() 
         update_target_y()
         
-      mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
-      mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
-      mean_100ep_beacon_time = np.mean(episode_beacons_time[-101:-1])
-      num_episodes = len(episode_rewards)
+      mean_100ep_reward = round(np.mean(episode_rewards), 1)
+      mean_100ep_beacon = round(np.mean(episode_beacons), 1)
+      mean_100ep_beacon_time = np.mean(episode_beacons_time)
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
         logger.record_tabular("episodes", num_episodes)
