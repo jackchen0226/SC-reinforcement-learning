@@ -78,7 +78,7 @@ last_filename = ""
 
 start_time = datetime.datetime.now().strftime("%m%d%H%M")
 
-SCREEN_DIM = 8
+SCREEN_DIM = 16
 
 def main():
 
