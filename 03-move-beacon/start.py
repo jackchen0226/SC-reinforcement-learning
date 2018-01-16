@@ -69,6 +69,7 @@ flags.DEFINE_float("lr", 0.0005, "Learning rate")
 flags.DEFINE_integer("num_agents", 4, "number of RL agents for A2C")
 flags.DEFINE_integer("num_scripts", 4, "number of script agents for A2C")
 flags.DEFINE_integer("nsteps", 20, "number of batch steps for A2C")
+flags.DEFINE_string("experiment", "SCREEN_DIM=16", "name of experiment")
 
 PROJ_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -77,6 +78,7 @@ last_filename = ""
 
 start_time = datetime.datetime.now().strftime("%m%d%H%M")
 
+SCREEN_DIM = 16
 
 def main():
 
@@ -98,18 +100,18 @@ def main():
   logdir = "tensorboard"
 
   if (FLAGS.algorithm == "deepq-4way"):
-    logdir = "tensorboard/mineral/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
+    logdir = "tensorboard/mineral/%s/%s_%s_prio%s_duel%s_lr%s/%s-%s" % (
       FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
-      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
+      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time, FLAGS.experiment)
   elif (FLAGS.algorithm == "deepq"):
-    logdir = "tensorboard/%s/%s/%s_%s_prio%s_duel%s_lr%s/%s" % (
+    logdir = "tensorboard/%s/%s/%s_%s_prio%s_duel%s_lr%s/%s-%s" % (
       FLAGS.map, FLAGS.algorithm, FLAGS.timesteps, FLAGS.exploration_fraction,
-      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time)
+      FLAGS.prioritized, FLAGS.dueling, lr_round, start_time, FLAGS.experiment)
   elif (FLAGS.algorithm == "a2c"):
-    logdir = "tensorboard/mineral/%s/%s_n%s_s%s_nsteps%s/lr%s/%s" % (
+    logdir = "tensorboard/mineral/%s/%s_n%s_s%s_nsteps%s/lr%s/%s-%s" % (
       FLAGS.algorithm, FLAGS.timesteps,
       FLAGS.num_agents + FLAGS.num_scripts, FLAGS.num_scripts,
-      FLAGS.nsteps, lr_round, start_time)
+      FLAGS.nsteps, lr_round, start_time, FLAGS.experiment)
 
   if (FLAGS.log == "tensorboard"):
     Logger.DEFAULT \
@@ -129,9 +131,15 @@ def main():
         map_name="MoveToBeacon",
         step_mul=step_mul,
         visualize=True,
+<<<<<<< HEAD
         screen_size_px=(16, 16),
         minimap_size_px=(16, 16),
         save_replay_episodes=500,
+=======
+        screen_size_px=(SCREEN_DIM, SCREEN_DIM),
+        minimap_size_px=(SCREEN_DIM, SCREEN_DIM),
+        save_replay_episodes=1000,
+>>>>>>> screen_size
         replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
@@ -140,15 +148,15 @@ def main():
       act = deepq_model.learn(
         env,
         q_func=model,
-        num_actions=16,
+        num_actions=SCREEN_DIM,
         lr=FLAGS.lr,
         max_timesteps=FLAGS.timesteps,
-        buffer_size=10000,
+        buffer_size=5000,
         exploration_fraction=FLAGS.exploration_fraction,
         exploration_final_eps=0.01,
         train_freq=4,
-        learning_starts=10000,
-        target_network_update_freq=1000,
+        learning_starts=500,
+        target_network_update_freq=100,
         gamma=0.99,
         prioritized_replay=True,
         callback=deepq_callback)
@@ -214,7 +222,9 @@ import numpy as np
 
 def deepq_callback(locals, globals):
   #pprint.pprint(locals)
-  global max_mean_reward, last_filename
+  global max_mean_reward
+  last_x_filename = ""
+  last_y_filename = ""
   if ('done' in locals and locals['done'] == True):
     if ('mean_100ep_reward' in locals and locals['num_episodes'] >= 10
         and locals['mean_100ep_reward'] > (max_mean_reward * 1.2)):
@@ -227,24 +237,28 @@ def deepq_callback(locals, globals):
         except Exception as e:
           print(str(e))
 
-      if (last_filename != ""):
-        os.remove(last_filename)
-        print("delete last model file : %s" % last_filename)
+      if (last_x_filename != ""):
+        os.remove(last_x_filename)
+        print("delete last model file : %s" % last_x_filename)
+      if (last_y_filename != ""):
+        os.remove(last_y_filename)
+        print("delete last model file : %s" % last_x_filename)
 
       max_mean_reward = locals['mean_100ep_reward']
       act_x = deepq_model.ActWrapper(locals['act_x'])
       act_y = deepq_model.ActWrapper(locals['act_y'])
 
-      filename = os.path.join(
+      x_filename = os.path.join(
         PROJ_DIR,
         'models/deepq/{}/mineral_x_{}.pkl'.format(datetime.date.today(), locals['mean_100ep_reward']))
-      act_x.save(filename)
-      filename = os.path.join(
+      act_x.save(x_filename)
+      y_filename = os.path.join(
         PROJ_DIR,
         'models/deepq/{}/mineral_y_{}.pkl'.format(datetime.date.today(), locals['mean_100ep_reward']))
-      act_y.save(filename)
-      print("save best mean_100ep_reward model to %s" % filename)
-      last_filename = filename
+      act_y.save(y_filename)
+      print("save best mean_100ep_reward model to {} and {}".format(x_filename, y_filename))
+      last_x_filename = x_filename
+      last_y_filename = y_filename
 
 
 def deepq_4way_callback(locals, globals):

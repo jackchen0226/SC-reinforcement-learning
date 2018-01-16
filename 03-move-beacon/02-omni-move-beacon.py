@@ -29,6 +29,8 @@ import numpy as np
 import zipfile
 import tempfile
 import time
+from itertools import islice
+from collections import deque
 
 import baselines.common.tf_util as U
 
@@ -222,7 +224,7 @@ def learn(env,
   sess.__enter__()
 
   def make_obs_ph(name):
-    return U.BatchInput((16, 16), name=name)
+    return U.BatchInput((num_actions, num_actions), name=name)
 
   act_x, train_x, update_target_x, debug_x = deepq.build_train(
     make_obs_ph=make_obs_ph,
@@ -279,10 +281,25 @@ def learn(env,
   update_target_x()
   update_target_y()
 
+<<<<<<< HEAD
   episode_rewards = [0.0]
   episode_beacons = [0.0]
   episode_beacons_time = [0.0]
   mean_time_beacons = [0.0]
+=======
+  # Episode metrics
+  episode_rewards = deque(maxlen=100)
+  episode_beacons = deque(maxlen=100)
+  episode_beacons_time = deque(maxlen=100)
+  # episode_beacons_time / episode_beacons
+  average_beacon_time = deque(maxlen=100)
+
+  episode_rewards.append(0.0)
+  episode_beacons.append(0.0)
+  episode_beacons_time.append(0.0)
+
+  num_episodes = 0
+>>>>>>> screen_size
   saved_mean_reward = None
 
   obs = env.reset()
@@ -304,6 +321,13 @@ def learn(env,
     print(model_file)
 
     beacon_time_start = 0
+<<<<<<< HEAD
+=======
+    beacons_collected = 0
+
+    # __________________________________ THE MAIN LOOP ______________________________________________________________________________________
+
+>>>>>>> screen_size
     for t in range(max_timesteps):
       if callback is not None:
         if callback(locals(), globals()):
@@ -327,14 +351,19 @@ def learn(env,
         kwargs['update_param_noise_threshold'] = update_param_noise_threshold
         kwargs['update_param_noise_scale'] = True
       #print(np.array(screen)[None].shape)
-      action_x = act_x(np.array(screen)[None], update_eps=update_eps, **kwargs)[0]
 
+      # Create the network output (action)
+      action_x = act_x(np.array(screen)[None], update_eps=update_eps, **kwargs)[0]
       action_y = act_y(np.array(screen)[None], update_eps=update_eps, **kwargs)[0]
 
       reset = False
 
       coord = [player[0], player[1]]
       rew = 0
+<<<<<<< HEAD
+=======
+      
+>>>>>>> screen_size
       beacon_time = 0
       
       coord = [action_x, action_y]
@@ -344,7 +373,6 @@ def learn(env,
       change_m = np.sqrt((change_x ** 2) + (change_y ** 2))
       #print(change_y, change_x, change_m)
 
-      # action 0-3
       # path_memory = np.array(path_memory_) # at end of action, edit path_memory
       if _MOVE_SCREEN not in obs[0].observation["available_actions"]:
         obs = env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])   
@@ -355,6 +383,7 @@ def learn(env,
       player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
       new_screen = (player_relative == _PLAYER_NEUTRAL).astype(int)
 
+      # Player coordinates cannot be determined when something else overlaps them
       try:
       	player_y, player_x = (player_relative == _PLAYER_FRIENDLY).nonzero()
       	player = [int(player_x.mean()), int(player_y.mean())]
@@ -362,8 +391,16 @@ def learn(env,
       	#print(player_y, player_x)
       	pass
       
+<<<<<<< HEAD
       if rew < (obs[0].reward * 100):
       	#obs[0].reward has increased
+=======
+      screen_l = 16
+      
+      if obs[0].reward != 0:
+      	#obs[0].reward has increased
+        #beacons_collected += 1
+>>>>>>> screen_size
       	beacon_time_end = t
       	beacon_time = beacon_time_end - beacon_time_start
       	beacon_time_start = t
@@ -375,11 +412,15 @@ def learn(env,
       #if change_m > np.sqrt((screen_l**2/2)/np.pi):
       #	rew -= 1
       # compare to raidus of circle quarter of area of screen
+<<<<<<< HEAD
       #if change_m < np.sqrt((screen_l**2/4)/np.pi):
       #	rew += 1
+=======
+      if change_m < np.sqrt((screen_l**2/4)/np.pi):
+      	rew += 1
+>>>>>>> screen_size
 
       done = obs[0].step_type == environment.StepType.LAST
-
 
       replay_buffer_x.add(screen, action_x, rew, new_screen, float(done))
       replay_buffer_y.add(screen, action_y, rew, new_screen, float(done))
@@ -391,11 +432,15 @@ def learn(env,
       episode_beacons_time[-1] += beacon_time
 
       if done:
+<<<<<<< HEAD
         '''
         if save_replays and len(episode_rewards) % save_episode_period == 0:
           env.save_replay(replay_dir)
           print("Replay Saved")
         '''
+=======
+        # Reset environment, player coordinates, and metrics
+>>>>>>> screen_size
         obs = env.reset()
         player_relative = obs[0].observation["screen"][_PLAYER_RELATIVE]
         screen = (player_relative == _PLAYER_NEUTRAL).astype(int)
@@ -409,11 +454,19 @@ def learn(env,
           mean_time_beacons[-1] = 0.0
 
         env.step(actions=[sc2_actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])])
+
+        if episode_beacons_time[-1] != 0.0 and episode_beacons[-1] != 0.0:
+          average_beacon_time.append(episode_beacons_time[-1] / episode_beacons[-1])
+        else:
+          average_beacon_time.append(np.nan)
         episode_rewards.append(0.0)
         episode_beacons.append(0.0)
         episode_beacons_time.append(0.0)
         mean_time_beacons.append(0.0)
         beacon_time_start = t
+
+        #beacons_collected = 0
+        num_episodes += 1
 
         reset = True
 
@@ -450,10 +503,16 @@ def learn(env,
         update_target_x() 
         update_target_y()
         
+<<<<<<< HEAD
       mean_100ep_reward = round(np.mean(episode_rewards[-101:-1]), 1)
       mean_100ep_beacon = round(np.mean(episode_beacons[-101:-1]), 1)
       mean_beacon_time_per_episode = np.mean(mean_time_beacons[-101:-1])
       num_episodes = len(episode_rewards)
+=======
+      mean_100ep_reward = round(np.mean(episode_rewards), 1)
+      mean_100ep_beacon = round(np.mean(episode_beacons), 1)
+      mean_100ep_beacon_time = np.nanmean(average_beacon_time)
+>>>>>>> screen_size
       if done and print_freq is not None and len(episode_rewards) % print_freq == 0:
         logger.record_tabular("steps", t)
         logger.record_tabular("episodes", num_episodes)
