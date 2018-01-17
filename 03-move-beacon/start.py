@@ -131,15 +131,8 @@ def main():
         map_name="MoveToBeacon",
         step_mul=step_mul,
         visualize=True,
-<<<<<<< HEAD
-        screen_size_px=(16, 16),
-        minimap_size_px=(16, 16),
-        save_replay_episodes=500,
-=======
         screen_size_px=(SCREEN_DIM, SCREEN_DIM),
         minimap_size_px=(SCREEN_DIM, SCREEN_DIM),
-        save_replay_episodes=1000,
->>>>>>> screen_size
         replay_dir='replays/') as env:
 
       model = deepq.models.cnn_to_mlp(
