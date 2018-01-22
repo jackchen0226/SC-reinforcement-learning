@@ -384,8 +384,8 @@ def learn(env,
       #if change_m > np.sqrt((screen_l**2/2)/np.pi):
       #	rew -= 1
       # compare to raidus of circle quarter of area of screen
-      if change_m < np.sqrt((screen_l**2/4)/np.pi):
-      	rew += 1
+      #if change_m < np.sqrt((screen_l**2/4)/np.pi):
+      #	rew += 1
 
       done = obs[0].step_type == environment.StepType.LAST
 
